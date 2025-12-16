@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Winter Pong — Candycane vs Snowman</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#071226;
+    --accent:#9ad3ff;
+    --card:#0f1724;
+    --muted:#bcd7ee;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+  body{
+    background: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.03), transparent 4%),
+                radial-gradient(circle at 90% 80%, rgba(255,255,255,0.02), transparent 8%),
+                linear-gradient(180deg,#071233, #021024 120%);
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+
+  .container{
+    width: min(1000px, 98vw);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 18px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.008));
+    border-bottom:1px solid rgba(255,255,255,0.02);
+  }
+  .title{
+    font-weight:600;
+    font-size:1.15rem;
+    color:#f1fbff;
+    display:flex;gap:10px;align-items:center;
+  }
+  .subtitle{font-size:0.86rem;color:var(--muted);opacity:0.9}
+  .controls{
+    display:flex;gap:10px;align-items:center;
+  }
+
+  button{
+    background:linear-gradient(180deg, #1c6bb0,#14568f);
+    color:white;border:0;padding:8px 12px;border-radius:10px;font-weight:600;cursor:pointer;
+    box-shadow:0 4px 10px rgba(8,45,78,0.4);
+  }
+  button.secondary{
+    background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);
+    box-shadow:none;font-weight:600;
+  }
+
+  .game-wrap{
+    display:flex;
+    gap:18px;
+    padding:18px;
+    align-items:stretch;
+  }
+
+  .panel{
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+    border-radius:12px;padding:12px;flex:1;min-height:420px;
+    display:flex;flex-direction:column;align-items:center;
+  }
+
+  #gameCanvas{
+    background: linear-gradient(180deg, #072033 0%, #031426 100%);
+    border-radius:10px;
+    width:100%;
+    height: min(60vh, 520px);
+    touch-action: none;
+  }
+
+  .scoreboard{
+    display:flex;gap:16px;align-items:center;margin-top:12px;
+    color:var(--muted);
+  }
+  .score-bubble{
+    background: linear-gradient(180deg,#072b47,#063847);
+    padding:8px 12px;border-radius:10px;font-weight:700;color:#eaf6ff;min-width:64px;text-align:center;
+    box-shadow: inset 0 -6px 12px rgba(0,0,0,0.4);
+  }
+
+  .instructions{
+    margin-top:12px;color:var(--muted);font-size:0.9rem;line-height:1.4;
+    text-align:center;
+  }
+
+  .footer{
+    padding:12px 18px;background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+    border-top:1px solid rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center;
+  }
+  small{color:var(--muted);opacity:0.8}
+
+  /* Tiny responsive tweaks */
+  @media (max-width:720px){
+    .game-wrap{flex-direction:column}
+    header{flex-direction:column;align-items:flex-start;gap:8px}
+    .controls{width:100%;justify-content:space-between}
+  }
+  .new {
+    display: inline-block;
+    padding: 10px 20px;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+</style>
+</head>
+<body>
+  <div class="container" role="application" aria-label="Winter Pong Game">
+    <header>
+      <div>
+        <div class="title">❄️ Winter Pong — Candycane Cup</div>
+        <div class="subtitle">Left: W/S • Right: ↑/↓ • Drag paddles on touch</div>
+      </div>
+      <div class="title">
+        <a class="new" href="index.html">Resume</a> <a class="new" href="Scratch.html">Football</a>
+      </div>
+      <div class="controls" aria-hidden="false">
+        <button id="startBtn" title="Start / Resume">Start</button>
+        <button id="pauseBtn" class="secondary" title="Pause">Pause</button>
+        <button id="resetBtn" class="secondary" title="Reset">Reset</button>
+      </div>
+    </header>
+
+    <div class="game-wrap">
+      <div class="panel" style="flex:1.6">
+        <canvas id="gameCanvas" width="900" height="520" aria-label="Pong playing field"></canvas>
+
+        <div class="scoreboard" role="status" aria-live="polite">
+          <div style="text-align:center;">
+            <div style="font-size:0.78rem;color:var(--muted)">Left</div>
+            <div id="leftScore" class="score-bubble">0</div>
+          </div>
+          <div style="flex:1;text-align:center;">
+            <div id="gameMsg" style="font-weight:700;color:#dff3ff">Press Start to play</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:0.78rem;color:var(--muted)">Right</div>
+            <div id="rightScore" class="score-bubble">0</div>
+          </div>
+        </div>
+
+        <div class="instructions">
+          First to <strong id="winningScoreDisplay">7</strong> wins. Enjoy the snow! ☃️
+        </div>
+      </div>
+
+      <div class="panel" style="flex:0.6">
+        <div style="width:100%;text-align:center;margin-bottom:10px">
+          <h3 style="margin:6px 0;color:#e6f9ff">How to play</h3>
+          <p style="margin:6px 0;color:var(--muted)">Use W/S for the left paddle and O/L for the right paddle. On mobile, drag the paddles.</p>
+        </div>
+
+        <div style="margin-top:8px">
+          <label style="display:block;color:var(--muted);margin-bottom:6px">Winning score</label>
+          <input id="winningScore" type="range" min="1" max="20" value="7" style="width:100%" />
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button id="soundToggle" class="secondary">Sound: On</button>
+            <button id="aiToggle" class="secondary">AI Opponent: Off</button>
+          </div>
+
+          <div style="margin-top:18px;color:var(--muted);font-size:0.92rem">
+            Pro tip: increase speed for a tougher match. The snowman won't like losing.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer">
+      <small>Made with cocoa & peppermint — single-file winter Pong. <strong>© Winter Pong</strong></small>
+      <small>Controls: W/S • O/L • Touch drag</small>
+    </div>
+  </div>
+
+<script>
+/* Winter Pong — Single-file game
+   - Candycane paddles drawn as a stripe pattern
+   - Snowman ball drawn procedurally
+   - Keyboard and touch controls
+   - Simple AI toggle
+   - Sound via WebAudio (no external assets)
+*/
+
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  let W = canvas.width, H = canvas.height;
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+  // Game state
+  let leftScore = 0, rightScore = 0;
+  let running = false, paused = false;
+  let winningScore = parseInt(document.getElementById('winningScore').value,10);
+
+  const stateEls = {
+    leftScore: document.getElementById('leftScore'),
+    rightScore: document.getElementById('rightScore'),
+    gameMsg: document.getElementById('gameMsg'),
+    winningScoreDisplay: document.getElementById('winningScoreDisplay'),
+  };
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const soundToggle = document.getElementById('soundToggle');
+  const aiToggle = document.getElementById('aiToggle');
+
+  stateEls.winningScoreDisplay.textContent = winningScore;
+
+  // Physics
+  let ball = { x: W/2, y: H/2, vx: 6, vy: 3, r: 18, speedMultiplier: 1 };
+  let paddles = {
+    left: { x: 28, y: H/2 - 60, w: 18, h: 140, vy:0 },
+    right: { x: W - 28 - 18, y: H/2 - 60, w: 18, h: 140, vy:0 }
+  };
+
+  // Input
+  const keys = {};
+  let aiEnabled = false;
+  let soundOn = true;
+  // Audio setup
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioCtx = AudioCtx ? new AudioCtx() : null;
+
+  function beep(freq=440, dur=0.05, vol=0.05) {
+    if(!audioCtx || !soundOn) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    g.gain.value = vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + dur);
+  }
+
+  // Create candy cane stripe pattern using an offscreen canvas
+  function makeCandyCanePattern() {
+    const psize = 32;
+    const off = document.createElement('canvas');
+    off.width = psize; off.height = psize;
+    const octx = off.getContext('2d');
+
+    // fill diagonal stripes
+    octx.fillStyle = '#fff';
+    octx.fillRect(0,0,psize,psize);
+
+    octx.strokeStyle = '#c71a31'; // candy red
+    octx.lineWidth = 6;
+    octx.beginPath();
+    octx.moveTo(-8,psize*0.75);
+    octx.lineTo(psize*0.75,-8);
+    octx.stroke();
+
+    octx.beginPath();
+    octx.moveTo(psize*0.25+0,psize+8);
+    octx.lineTo(psize+8,psize*0.25+0);
+    octx.stroke();
+
+    // subtle highlight to show gloss
+    octx.globalAlpha = 0.12;
+    octx.fillStyle = '#fff';
+    octx.fillRect(0,0,psize,psize);
+    octx.globalAlpha = 1;
+
+    return ctx.createPattern(off,'repeat');
+  }
+  const candyPattern = makeCandyCanePattern();
+
+  // Utility: clamp
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+  // Resize canvas responsively
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(400, Math.floor(rect.width));
+    H = Math.max(280, Math.floor(rect.height));
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+
+    // reposition paddles appropriately (keep centers intact)
+    paddles.left.x = 28;
+    paddles.right.x = W - 28 - paddles.right.w;
+    // limit paddles inside
+    paddles.left.y = clamp(paddles.left.y, 10, H - paddles.left.h - 10);
+    paddles.right.y = clamp(paddles.right.y, 10, H - paddles.right.h - 10);
+
+    // adjust ball if offscreen
+    ball.x = clamp(ball.x, ball.r+5, W - ball.r - 5);
+    ball.y = clamp(ball.y, ball.r+5, H - ball.r - 5);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // Draw snowman ball (two stacked spheres with face, scarf, hat)
+  function drawSnowmanAt(gx, gy, gr) {
+    // gr = radius of lower body (big)
+    const bottomR = gr;
+    const topR = Math.max(0, gr * 0.6);
+    const centerBottomY = gy + (topR*0.2);
+    const centerTopY = gy - bottomR*0.6;
+
+    // shadows subtle
+    ctx.save();
+    // bottom
+    ctx.beginPath();
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 1;
+    ctx.ellipse(gx, centerBottomY, bottomR, bottomR*0.9, 0, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // top head
+    ctx.beginPath();
+    ctx.ellipse(gx, centerTopY, topR, topR*0.9, 0, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // eyes
+    ctx.fillStyle = '#222';
+    const eyeY = centerTopY - topR*0.15;
+    ctx.beginPath(); ctx.ellipse(gx - topR*0.25, eyeY, topR*0.09, topR*0.12, 0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(gx + topR*0.25, eyeY, topR*0.09, topR*0.12, 0,0,Math.PI*2); ctx.fill();
+
+    // carrot nose
+    ctx.fillStyle = '#f07f20';
+    ctx.beginPath();
+    ctx.moveTo(gx, eyeY+3);
+    ctx.lineTo(gx + topR*0.8, eyeY+1.5);
+    ctx.lineTo(gx, eyeY - topR*0.06);
+    ctx.closePath();
+    ctx.fill();
+
+    // mouth (coal dots)
+    ctx.fillStyle = '#222';
+    for(let i=0;i<4;i++){
+      const ang = Math.PI*0.5 + (i-1.5)*0.22;
+      const mx = gx + Math.cos(ang)*(topR*0.4);
+      const my = eyeY + Math.sin(ang)*(topR*0.4);
+      ctx.beginPath(); ctx.ellipse(mx,my, topR*0.06, topR*0.04, 0,0,Math.PI*2); ctx.fill();
+    }
+
+    // buttons on chest
+    ctx.fillStyle = '#222';
+    for(let i=0;i<3;i++){
+      const by = centerBottomY - bottomR*0.15 + i*(bottomR*0.22);
+      ctx.beginPath(); ctx.ellipse(gx, by, bottomR*0.08, bottomR*0.06, 0,0,Math.PI*2); ctx.fill();
+    }
+
+    // scarf
+    ctx.fillStyle = '#b4173a';
+    ctx.fillRect(gx - topR*0.9, centerTopY + topR*0.25, topR*1.8, topR*0.28);
+    // scarf tail
+    ctx.beginPath();
+    ctx.moveTo(gx + topR*0.45, centerTopY + topR*0.5);
+    ctx.lineTo(gx + topR*0.85, centerTopY + topR*0.95);
+    ctx.lineTo(gx + topR*0.3, centerTopY + topR*0.9);
+    ctx.closePath();
+    ctx.fill();
+
+    // hat
+    ctx.fillStyle = '#06233a';
+    ctx.fillRect(gx - topR*0.6, centerTopY - topR*0.9, topR*1.2, topR*0.36);
+    ctx.fillStyle = '#0a3b5a';
+    ctx.fillRect(gx - topR*0.3, centerTopY - topR*1.4, topR*0.6, topR*0.6);
+
+    ctx.restore();
+  }
+
+  // Draw paddles as candy canes (rounded rectangle filled with pattern + highlight)
+  function drawPaddle(p){
+    ctx.save();
+    ctx.beginPath();
+    const x = p.x, y = p.y, w = p.w, h = p.h;
+    const radius = 8;
+    // rounded rect path
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + w, y, x + w, y + h, radius);
+    ctx.arcTo(x + w, y + h, x, y + h, radius);
+    ctx.arcTo(x, y + h, x, y, radius);
+    ctx.arcTo(x, y, x + w, y, radius);
+    ctx.closePath();
+    ctx.fillStyle = candyPattern;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.stroke();
+
+    // highlight stripe
+    ctx.beginPath();
+    ctx.moveTo(x+4, y+6);
+    ctx.lineTo(x+w-4, y+6);
+    ctx.lineTo(x+w-6, y+10);
+    ctx.lineTo(x+6, y+10);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // Field drawing
+  function drawField(){
+    // clear
+    ctx.clearRect(0,0,W,H);
+
+    // faint snowy texture
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'rgba(255,255,255,0.01)');
+    g.addColorStop(1,'rgba(255,255,255,0.02)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // center dashed line (snowy)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10,12]);
+    ctx.beginPath(); ctx.moveTo(W/2,20); ctx.lineTo(W/2,H-20); ctx.stroke();
+    ctx.restore();
+
+    // little snowflakes (decorative)
+    for(let i=0;i<6;i++){
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      const sx = (i+1)*W/7 + Math.sin(Date.now()/3000 + i)*6;
+      const sy = 30 + i*40;
+      ctx.beginPath(); ctx.ellipse(sx, sy, 4,4,0,0,Math.PI*2); ctx.fill();
+    }
+
+    // draw paddles
+    drawPaddle(paddles.left);
+    drawPaddle(paddles.right);
+
+    // draw snowman as ball (two stacked circles)
+    drawSnowmanAt(ball.x, ball.y, ball.r);
+  }
+
+  // Reset ball to center and give direction toward last scorer or random
+  let lastScorer = null;
+  function resetBall(towards='random') {
+    ball.x = W/2;
+    ball.y = H/2;
+    const baseSpeed = 5 + Math.random()*1.6;
+    const angle = (Math.random() * 0.6 - 0.3); // -0.3..0.3 radians
+    let dir = (towards === 'left') ? -1 : (towards === 'right') ? 1 : (Math.random() < 0.5 ? -1 : 1);
+    // If last scorer exists, serve toward the player who lost (so towards last scorer? We'll randomize)
+    if(towards === 'random' && lastScorer) dir = (lastScorer === 'left') ? -1 : 1;
+    ball.vx = dir * baseSpeed * ball.speedMultiplier;
+    ball.vy = Math.sin(angle) * baseSpeed * 1.1;
+  }
+
+  // Score update
+  function scorePoint(side) {
+    if(side === 'left') leftScore++;
+    else rightScore++;
+
+    stateEls.leftScore.textContent = leftScore;
+    stateEls.rightScore.textContent = rightScore;
+
+    beep(700,0.06,0.06);
+    // check win
+    if(leftScore >= winningScore || rightScore >= winningScore){
+      running = false;
+      paused = true;
+      const winner = (leftScore >= winningScore) ? 'Left' : 'Right';
+      stateEls.gameMsg.textContent = `${winner} wins! 🎉`;
+      beep(1100,0.16,0.08);
+      return;
+    }
+
+    // show message and reset ball toward the side that lost
+    stateEls.gameMsg.textContent = side === 'left' ? 'Left scored — serve to right' : 'Right scored — serve to left';
+    lastScorer = side;
+    setTimeout(()=>{ resetBall(side === 'left' ? 'right' : 'left');  }, 650);
+  }
+
+  // Update game physics
+  function update(dt) {
+    if(!running || paused) return;
+
+    // dt in seconds
+
+    // Player input (keyboard)
+    const paddleSpeed = 420; // px/s
+    if(keys['KeyW']) paddles.left.y -= paddleSpeed * dt;
+    if(keys['KeyS']) paddles.left.y += paddleSpeed * dt;
+    if(keys['KeyO']) paddles.right.y -= paddleSpeed * dt;
+    if(keys['KeyL']) paddles.right.y += paddleSpeed * dt;
+
+    // AI for right paddle if enabled
+    if(aiEnabled){
+      const target = ball.y - paddles.right.h/2;
+      const diff = target - paddles.right.y;
+      const aiSpeed = 280;
+      paddles.right.y += clamp(diff, -aiSpeed*dt, aiSpeed*dt);
+    }
+
+    // clamp paddles
+    paddles.left.y = clamp(paddles.left.y, 8, H - paddles.left.h - 8);
+    paddles.right.y = clamp(paddles.right.y, 8, H - paddles.right.h - 8);
+
+    // move ball
+    ball.x += ball.vx * dt * 60/1.0; // scale for consistent speed across dt (tuned)
+    ball.y += ball.vy * dt * 60/1.0;
+
+    // top/bottom collide
+    if(ball.y - ball.r <= 6){ ball.y = ball.r + 6; ball.vy *= -1; beep(700,0.02,0.03); }
+    if(ball.y + ball.r >= H - 6){ ball.y = H - ball.r - 6; ball.vy *= -1; beep(700,0.02,0.03); }
+
+    // left paddle collision
+    if(ball.x - ball.r <= paddles.left.x + paddles.left.w + 4){
+      if(ball.y > paddles.left.y - 4 && ball.y < paddles.left.y + paddles.left.h + 4){
+        // collide: reflect with spin based on where it hit
+        const rel = (ball.y - (paddles.left.y + paddles.left.h/2)) / (paddles.left.h/2); // -1..1
+        const bounceAngle = rel * 0.9; // tilt
+        const speed = Math.hypot(ball.vx, ball.vy) * 1.05;
+        ball.vx = Math.abs(speed) * Math.cos(bounceAngle) * 1.0; // send to right
+        ball.vy = Math.sin(bounceAngle) * speed;
+        // nudge position out
+        ball.x = paddles.left.x + paddles.left.w + ball.r + 6;
+        beep(900,0.03,0.06);
+      } else if(ball.x - ball.r < 0){ // missed
+        scorePoint('right');
+      }
+    }
+
+    // right paddle collision
+    if(ball.x + ball.r >= paddles.right.x - 4){
+      if(ball.y > paddles.right.y - 4 && ball.y < paddles.right.y + paddles.right.h + 4){
+        const rel = (ball.y - (paddles.right.y + paddles.right.h/2)) / (paddles.right.h/2);
+        const bounceAngle = rel * 0.9;
+        const speed = Math.hypot(ball.vx, ball.vy) * 1.05;
+        ball.vx = -Math.abs(speed) * Math.cos(bounceAngle) * 1.0; // send to left
+        ball.vy = Math.sin(bounceAngle) * speed;
+        ball.x = paddles.right.x - ball.r - 6;
+        beep(900,0.03,0.06);
+      } else if(ball.x + ball.r > W){ // missed
+        scorePoint('left');
+      }
+    }
+
+    // slowly increase difficulty
+    ball.speedMultiplier = 1 + Math.min(1.3, (leftScore + rightScore) * 0.03);
+    // clamp velocity magnitude
+    const maxSpeed = 18 * ball.speedMultiplier;
+    const s = Math.hypot(ball.vx, ball.vy);
+    if(s > maxSpeed){
+      ball.vx = ball.vx / s * maxSpeed;
+      ball.vy = ball.vy / s * maxSpeed;
+    }
+  }
+
+  // Render loop
+  let lastTime = performance.now();
+  function loop(t){
+    const dt = Math.min(0.035, (t - lastTime) / 1000);
+    lastTime = t;
+    update(dt);
+    drawField();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // Controls
+  window.addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    // start on any key
+    // space toggles start/pause
+    if(e.code === 'Space'){ toggleStart(); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+  // Touch: allow dragging paddles
+  let dragging = null;
+  function getTouchPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    const touch = evt.touches ? evt.touches[0] : evt;
+    return {x: touch.clientX - rect.left, y: touch.clientY - rect.top};
+  }
+  canvas.addEventListener('touchstart', (evt)=>{
+    evt.preventDefault();
+    const pos = getTouchPos(evt);
+    if(pos.x < W/2 && pos.y > paddles.left.y && pos.y < paddles.left.y + paddles.left.h) dragging = 'left';
+    else if(pos.x >= W/2 && pos.y > paddles.right.y && pos.y < paddles.right.y + paddles.right.h) dragging = 'right';
+    else {
+      // if touched near edges, allow direct reposition
+      if(pos.x < W/2) dragging = 'left'; else dragging = 'right';
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('touchmove', (evt)=>{
+    if(!dragging) return;
+    const pos = getTouchPos(evt);
+    const newY = pos.y - paddles[dragging].h/2;
+    paddles[dragging].y = clamp(newY, 8, H - paddles[dragging].h - 8);
+  }, {passive:false});
+
+  canvas.addEventListener('touchend', ()=>{ dragging = null; });
+
+  // For mouse dragging (desktop)
+  let mouseDown = false;
+  canvas.addEventListener('mousedown', (e)=>{
+    mouseDown = true;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    if(mx < W/2) dragging = 'left';
+    else dragging = 'right';
+  });
+  window.addEventListener('mousemove', (e)=>{
+    if(!mouseDown || !dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const my = e.clientY - rect.top;
+    paddles[dragging].y = clamp(my - paddles[dragging].h/2, 8, H - paddles[dragging].h - 8);
+  });
+  window.addEventListener('mouseup', ()=>{ mouseDown = false; dragging = null; });
+
+  // Buttons
+  function toggleStart(){
+    if(!running){
+      if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      running = true;
+      paused = false;
+      // if ball stationary, serve
+      if(Math.abs(ball.vx) < 0.1 && Math.abs(ball.vy) < 0.1) resetBall('random');
+      stateEls.gameMsg.textContent = 'Game on!';
+      startBtn.textContent = 'Resume';
+    } else {
+      paused = false;
+      stateEls.gameMsg.textContent = 'Resumed';
+    }
+  }
+  startBtn.addEventListener('click', toggleStart);
+
+  pauseBtn.addEventListener('click', ()=>{
+    if(!running) return;
+    paused = !paused;
+    stateEls.gameMsg.textContent = paused ? 'Paused' : 'Resumed';
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    running = false; paused = true;
+    leftScore = rightScore = 0;
+    stateEls.leftScore.textContent = 0; stateEls.rightScore.textContent = 0;
+    stateEls.gameMsg.textContent = 'Reset — press Start';
+    // reset positions
+    paddles.left.y = H/2 - paddles.left.h/2;
+    paddles.right.y = H/2 - paddles.right.h/2;
+    resetBall('random');
+  });
+
+  // Range control
+  document.getElementById('winningScore').addEventListener('input', (e)=>{
+    winningScore = parseInt(e.target.value,10);
+    stateEls.winningScoreDisplay.textContent = winningScore;
+  });
+
+  // Sound toggle
+  soundToggle.addEventListener('click', ()=>{
+    soundOn = !soundOn;
+    soundToggle.textContent = 'Sound: ' + (soundOn ? 'On' : 'Off');
+    if(audioCtx && audioCtx.state === 'suspended' && soundOn) audioCtx.resume();
+  });
+
+  // AI toggle
+  aiToggle.addEventListener('click', ()=>{
+    aiEnabled = !aiEnabled;
+    aiToggle.textContent = 'AI Opponent: ' + (aiEnabled ? 'On' : 'Off');
+    aiToggle.classList.toggle('secondary', !aiEnabled);
+  });
+
+  // Start paused
+  resetBall('random');
+  paused = true;
+
+  // initial draw
+  drawField();
+
+  // Accessibility: keyboard info
+  // Focus canvas to accept key inputs
+  canvas.setAttribute('tabindex','0');
+  canvas.style.outline = 'none';
+  canvas.addEventListener('focus', ()=>{ /* noop */ });
+
+  // Make sure page continues to scale nicely if container size changed
+  const observer = new ResizeObserver(resizeCanvas);
+  observer.observe(canvas);
+
+})();
+</script>
+</body>
+</html>
