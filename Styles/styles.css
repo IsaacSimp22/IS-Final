@@ -2,6 +2,7 @@ body{
     background-image: url(https://byucougars.com/imgproxy/_mV8pKuqwgifu2-KJ0KiJf1uZrM9WspMgCzrp7r59xk/rs:fit:1980:0:0:0/g:ce:0:0/q:90/aHR0cHM6Ly9zdG9yYWdlLmdvb2dsZWFwaXMuY29tL2J5dWNvdWdhcnMtcHJvZC8yMDIzLzEwLzIyL3JyWTl2RFNBY0JkaXlWUEZ2dm1pZzhsdDRseUZsOFEwS05KZmpxaGMuanBn.jpg);
     background-size: cover ;
     font-family: cursive;
+    color: black;
 
 }
 
@@ -41,14 +42,14 @@ h2 {
     background: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8));
     top: 115px;
     left: 15px;
-    right: 850px;   
+    right: 740px;   
     min-height: 537px;
     z-index: 3
 }
 .right {
     top: 97px;
     right: 15px;
-    width: 800px;   
+    width: 700px;   
     height: fit-content;
     text-align: center;
     border: none;
@@ -100,4 +101,9 @@ ul {
 }
 .yup {
     background: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8));
+}
+.video iframe {
+    width: 100%;
+    max-width: 560px;
+    height: 315px;
 }
